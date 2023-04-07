@@ -8,12 +8,16 @@
 #include <QSqlTableModel>
 #include <QHeaderView>
 #include "embed_sql.h"
+#include "mainwindow.h"
+
+
 
 int main(int argc, char *argv[])
 {
+    //Create an QApplication a, and create a MainWindow inside it.
     QApplication a(argc, argv);
-    qDebug() << "haha";
-
+    /*
+    //set login information
     QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL");
     QString hostname = QString("127.0.0.1");
     QString database = QString("embedding");
@@ -22,7 +26,7 @@ int main(int argc, char *argv[])
     int port = 3306;
     bool connect_state = false;
 
-
+    //Connect database
     connect_state = connect_sql(db,
                                 hostname,
                                 database,
@@ -32,6 +36,7 @@ int main(int argc, char *argv[])
 
 
 
+    //
     QLabel lab;
     lab.setAlignment(Qt::AlignCenter);
     lab.setGeometry(100,100,400,400);
@@ -67,6 +72,8 @@ int main(int argc, char *argv[])
         lab.setText("Connect failed");
         lab.show();
     }
-
+*/
+    MainWindow w;
+    w.show();
     return a.exec();
 }

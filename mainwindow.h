@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include <QLabel>
+#include <QMenu>
+#include <QToolBar>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -18,5 +20,7 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    void createMenu();
+    void createNaviBar();
 };
 #endif // MAINWINDOW_H
