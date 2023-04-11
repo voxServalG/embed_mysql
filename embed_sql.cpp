@@ -1,9 +1,20 @@
 #include "embed_sql.h"
 
-bool connect_sql(QSqlDatabase& db, QString& hostname, QString& databaseName, QString& username, QString& password, int& port)
+embed_sql::embed_sql()
 {
+
+}
+bool embed_sql::init_sql()
+{
+    db = QSqlDatabase::addDatabase("QMYSQL");
+    QString hostname = QString("127.0.0.1");
+    QString database = QString("embedding");
+    QString username = QString("root");
+    QString password = QString("114514");
+    int port = 3306;
+
     db.setHostName(hostname); // Host name
-    db.setDatabaseName(databaseName); // Database name
+    db.setDatabaseName(database); // Database name
     db.setUserName(username);     // User name
     db.setPassword(password);   // Password
     db.setPort(port);           // Port to connect
@@ -17,3 +28,8 @@ bool connect_sql(QSqlDatabase& db, QString& hostname, QString& databaseName, QSt
         return false;
     }
 }
+
+/*QSqlDatabase embed_sql::getDb()
+{
+    return db;
+}*/

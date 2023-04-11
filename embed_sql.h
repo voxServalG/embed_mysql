@@ -7,4 +7,14 @@
 #include <QtSql>
 #include <QDebug>
 
-bool connect_sql(QSqlDatabase& db, QString& hostname, QString& databaseName, QString& username, QString& password, int& port);
+
+class embed_sql
+{
+public:
+    embed_sql();
+    bool init_sql();
+    QSqlDatabase db;
+    QSqlDatabase getDb();
+private:
+
+};
