@@ -4,14 +4,19 @@ embed_sql::embed_sql()
 {
 
 }
-bool embed_sql::init_sql()
+bool embed_sql::init_sql(QString hostname,
+                         QString database,
+                         QString username,
+                         QString password,
+                         int port
+                         )
 {
     db = QSqlDatabase::addDatabase("QMYSQL");
-    QString hostname = QString("127.0.0.1");
+    /*QString hostname = QString("127.0.0.1");
     QString database = QString("embedding");
     QString username = QString("root");
     QString password = QString("114514");
-    int port = 3306;
+    int port = 3306;*/
 
     db.setHostName(hostname); // Host name
     db.setDatabaseName(database); // Database name
@@ -29,7 +34,7 @@ bool embed_sql::init_sql()
     }
 }
 
-/*QSqlDatabase embed_sql::getDb()
+QSqlDatabase embed_sql::getDb()
 {
     return db;
-}*/
+}

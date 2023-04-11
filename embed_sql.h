@@ -12,9 +12,13 @@ class embed_sql
 {
 public:
     embed_sql();
-    bool init_sql();
-    QSqlDatabase db;
+    bool init_sql(QString hostname=QString("127.0.0.1"),
+                  QString database=QString("embedding"),
+                  QString username=QString("root"),
+                  QString password=QString("114514"),
+                  int port=3306
+                  );
     QSqlDatabase getDb();
 private:
-
+    QSqlDatabase db;
 };

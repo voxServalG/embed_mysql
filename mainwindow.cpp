@@ -8,7 +8,6 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     mysql = new embed_sql;
-
     if(mysql->init_sql())
         qDebug("Connect successfully");
     else
@@ -119,7 +118,7 @@ QWidget* MainWindow::createDataPage()
     sFrame->setFrameStyle(QFrame::StyledPanel);
     sFrame->setLayout(sLayout);
 
-    dataModel = new QSqlTableModel(dataPage, mysql->db);
+    dataModel = new QSqlTableModel(dataPage, mysql->getDb());
     dataModel->setTable("field_data");
     dataModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
     dataModel->setHeaderData(0, Qt::Horizontal, "TIME");
@@ -144,7 +143,64 @@ QWidget* MainWindow::createDataPage()
 QWidget* MainWindow::createAnalysisPage()
 {
     QWidget* analysisPage = new QWidget;
+    QHBoxLayout* layout = new QHBoxLayout;
 
+    QChartView* chartView = new QChartView(this);
+    QChart* chart = new QChart();
+    chart->setTitle("ANALYSIS");
+    chartView->setChart(chart);
+    this->setCentralWidget(chartView);
+
+    QLineSeries* seriesTemp = new QLineSeries();
+    QLineSeries* seriesHumid = new QLineSeries();
+    seriesTemp->setName("Temp");
+    seriesHumid->setName("Humidity");
+    chart->addSeries(seriesTemp);
+    chart->addSeries(seriesHumid);
+
+    //sql query
+    QSqlQuery query(mysql->getDb());
+    QString sql = "select * from field_data";
+    query.exec(sql);
+    bool isQueryEmpty = true;
+    qint32 timeFirst, timeEnd;
+    while(query.next())
+    {
+        qint32 time = query.value(0).toInt();
+        qreal temp = query.value(1).toDouble();
+        qreal humidity = query.value(2).toDouble();
+        if(isQueryEmpty)
+        {
+            timeFirst = time;
+            isQueryEmpty = false;
+        }
+        timeEnd = time;
+        seriesTemp->append(time, temp);
+        seriesHumid->append(time, humidity);
+    }
+
+    //set axis
+    QValueAxis* axisX_time = new QValueAxis;
+    axisX_time->setRange(timeFirst, timeEnd);
+    axisX_time->setTickCount(20);
+
+    chart->addAxis(axisX_time, Qt::AlignBottom);
+    QValueAxis *axisY=new QValueAxis;                //左边y轴
+    axisY->setRange(0,100);
+    axisY->setTickCount(11);
+    chart->addAxis(axisY, Qt::AlignLeft);
+    QValueAxis *axisY1=new QValueAxis;                //右边y轴
+    axisY1->setRange(0,100);
+    axisY1->setTickCount(11);
+    chart->addAxis(axisY1, Qt::AlignRight);
+    seriesTemp->attachAxis(axisX_time);                 //折线与坐标轴捆绑
+    seriesTemp->attachAxis(axisY);
+    seriesHumid->attachAxis(axisX_time);
+    seriesHumid->attachAxis(axisY1);
+
+
+    layout->addWidget(chartView);
+    analysisPage->setLayout(layout);
     return analysisPage;
 }
 

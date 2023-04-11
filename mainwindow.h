@@ -11,6 +11,11 @@
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QTableView>
+#include <QChartView>
+#include <QLineSeries>
+#include <QDateTime>
+#include <QDateTimeAxis>
+#include <QValueAxis>
 #include "embed_sql.h"
 
 QT_BEGIN_NAMESPACE
