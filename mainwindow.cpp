@@ -63,10 +63,6 @@ void MainWindow::createStackWidget()
     QWidget* dataPage = createDataPage();
     QWidget* analysisPage = createAnalysisPage();
 
-    QLabel* label1 = new QLabel("1");
-    QLabel* label2 = new QLabel("2");
-    QLabel* label3 = new QLabel("3");
-
     stackWidget->addWidget(homePage);
     stackWidget->addWidget(dataPage);
     stackWidget->addWidget(analysisPage);
@@ -143,14 +139,18 @@ QWidget* MainWindow::createDataPage()
 QWidget* MainWindow::createAnalysisPage()
 {
     QWidget* analysisPage = new QWidget;
-    QHBoxLayout* layout = new QHBoxLayout;
 
+    QHBoxLayout* layout = new QHBoxLayout;
+    QHBoxLayout* layout_title = new QHBoxLayout;
+//setting chartview into 'layout_title'
+    QLabel* titleLabel = new QLabel("Analysis");
+    layout_title->addWidget(titleLabel);
+//setting chartview into 'layout'
     QChartView* chartView = new QChartView(this);
     QChart* chart = new QChart();
     chart->setTitle("ANALYSIS");
     chartView->setChart(chart);
     this->setCentralWidget(chartView);
-
     QLineSeries* seriesTemp = new QLineSeries();
     QLineSeries* seriesHumid = new QLineSeries();
     seriesTemp->setName("Temp");
@@ -197,10 +197,13 @@ QWidget* MainWindow::createAnalysisPage()
     seriesTemp->attachAxis(axisY);
     seriesHumid->attachAxis(axisX_time);
     seriesHumid->attachAxis(axisY1);
-
-
     layout->addWidget(chartView);
-    analysisPage->setLayout(layout);
+
+//Adding QHB into QVB
+    QVBoxLayout* layout_final = new QVBoxLayout;
+    layout_final->addLayout(layout_title);
+    layout_final->addLayout(layout);
+    analysisPage->setLayout(layout_final);
     return analysisPage;
 }
 
