@@ -21,7 +21,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(homeAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(dataAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(analysisAction, &QAction::triggered, this, &MainWindow::switchPages);
-
+    connect(tempCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
+    connect(humidCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
 }
 
 MainWindow::~MainWindow()
@@ -66,6 +67,8 @@ void MainWindow::createStackWidget()
     stackWidget->addWidget(homePage);
     stackWidget->addWidget(dataPage);
     stackWidget->addWidget(analysisPage);
+
+
 
     setCentralWidget(stackWidget);
 
@@ -144,19 +147,30 @@ QWidget* MainWindow::createAnalysisPage()
     QHBoxLayout* layout_title = new QHBoxLayout;
 //setting chartview into 'layout_title'
     QLabel* titleLabel = new QLabel("Analysis");
+    tempCheck = new QCheckBox("Temp");
+    humidCheck = new QCheckBox("Humidity");
+    tempCheck->setCheckState(Qt::Checked);
+    humidCheck->setCheckState(Qt::Checked);
     layout_title->addWidget(titleLabel);
+    layout_title->addWidget(tempCheck);
+    layout_title->addWidget(humidCheck);
+
 //setting chartview into 'layout'
     QChartView* chartView = new QChartView(this);
-    QChart* chart = new QChart();
+    chart = new QChart();
     chart->setTitle("ANALYSIS");
     chartView->setChart(chart);
     this->setCentralWidget(chartView);
-    QLineSeries* seriesTemp = new QLineSeries();
-    QLineSeries* seriesHumid = new QLineSeries();
+    seriesTemp = new QLineSeries();
+    seriesHumid = new QLineSeries();
     seriesTemp->setName("Temp");
     seriesHumid->setName("Humidity");
+
+
+    //add series to chart
     chart->addSeries(seriesTemp);
     chart->addSeries(seriesHumid);
+    //seriesHumid->setVisible(false);
 
     //sql query
     QSqlQuery query(mysql->getDb());
@@ -216,4 +230,27 @@ void MainWindow::switchPages()
         stackWidget->setCurrentIndex(1);
     else if(action->text() == "ANALYSIS")
         stackWidget->setCurrentIndex(2);
+}
+
+void MainWindow::setChartSeriesVisibility()
+{
+    if(tempCheck->isChecked())
+    {
+        seriesTemp->setVisible(true);
+    }
+    else
+    {
+        seriesTemp->setVisible(false);
+    }
+
+    if(humidCheck->isChecked())
+    {
+        seriesHumid->setVisible(true);
+    }
+    else
+    {
+        seriesHumid->setVisible(false);
+    }
+
+
 }

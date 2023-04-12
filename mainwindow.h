@@ -16,6 +16,7 @@
 #include <QDateTime>
 #include <QDateTimeAxis>
 #include <QValueAxis>
+#include <QCheckBox>
 #include "embed_sql.h"
 
 QT_BEGIN_NAMESPACE
@@ -47,10 +48,19 @@ private:
     QAction* dataAction;
     QAction* analysisAction;
 
+    QCheckBox* tempCheck;
+    QCheckBox* humidCheck;
+
+    QLineSeries* seriesTemp;
+    QLineSeries* seriesHumid;
+
+    QChart* chart;
+
     embed_sql* mysql;
     QSqlTableModel* dataModel;
 public slots:
     void switchPages();
+    void setChartSeriesVisibility();
 
 
 };
