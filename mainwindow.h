@@ -55,6 +55,7 @@ private:
     QLineSeries* seriesTemp;
     QLineSeries* seriesHumid;
 
+    QChartView*  chartView;
     QChart* chart;
 
     embed_sql* mysql;
