@@ -18,6 +18,12 @@ MainWindow::MainWindow(QWidget *parent)
     createNaviBar();
     createStackWidget();
     //createDataPage();
+
+    this->updateTimer = new QTimer(this);
+    this->updateTimer->setInterval(3000);
+    this->updateTimer->start();
+
+    connect(updateTimer, &QTimer::timeout, this, &MainWindow::updateDataModel);
     connect(homeAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(dataAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(analysisAction, &QAction::triggered, this, &MainWindow::switchPages);
@@ -117,6 +123,8 @@ QWidget* MainWindow::createDataPage()
     sFrame->setFrameStyle(QFrame::StyledPanel);
     sFrame->setLayout(sLayout);
 
+
+    //to update dataModel every interval. to do setModel for tableView every interval
     dataModel = new QSqlTableModel(dataPage, mysql->getDb());
     dataModel->setTable("field_data");
     dataModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
@@ -177,9 +185,11 @@ QWidget* MainWindow::createAnalysisPage()
     QString sql = "select * from field_data";
     query.exec(sql);
     bool isQueryEmpty = true;
+    int numOfValue = 0;
     qint32 timeFirst, timeEnd;
     while(query.next())
     {
+        numOfValue++;
         qint32 time = query.value(0).toInt();
         qreal temp = query.value(1).toDouble();
         qreal humidity = query.value(2).toDouble();
@@ -196,19 +206,20 @@ QWidget* MainWindow::createAnalysisPage()
     //set axis
     QValueAxis* axisX_time = new QValueAxis;
     axisX_time->setRange(timeFirst, timeEnd);
-    axisX_time->setTickCount(20);
+    axisX_time->setTickCount(numOfValue);
 
     chart->addAxis(axisX_time, Qt::AlignBottom);
     QValueAxis *axisY=new QValueAxis;                //左边y轴
     axisY->setRange(0,100);
     axisY->setTickCount(11);
     chart->addAxis(axisY, Qt::AlignLeft);
-    QValueAxis *axisY1=new QValueAxis;                //右边y轴
+    QValueAxis *axisY1=new QValueAxis;              //右边y轴
     axisY1->setRange(0,100);
     axisY1->setTickCount(11);
     chart->addAxis(axisY1, Qt::AlignRight);
     seriesTemp->attachAxis(axisX_time);                 //折线与坐标轴捆绑
     seriesTemp->attachAxis(axisY);
+
     seriesHumid->attachAxis(axisX_time);
     seriesHumid->attachAxis(axisY1);
     layout->addWidget(chartView);
@@ -252,5 +263,15 @@ void MainWindow::setChartSeriesVisibility()
         seriesHumid->setVisible(false);
     }
 
+
+}
+
+void MainWindow::updateDataModel()
+{
+    this->dataModel->select();
+}
+
+void MainWindow::updateChart()
+{
 
 }

@@ -17,6 +17,7 @@
 #include <QDateTimeAxis>
 #include <QValueAxis>
 #include <QCheckBox>
+#include <QTimer>
 #include "embed_sql.h"
 
 QT_BEGIN_NAMESPACE
@@ -58,9 +59,13 @@ private:
 
     embed_sql* mysql;
     QSqlTableModel* dataModel;
+
+    QTimer* updateTimer;
 public slots:
     void switchPages();
     void setChartSeriesVisibility();
+    void updateDataModel();
+    void updateChart();
 
 
 };
