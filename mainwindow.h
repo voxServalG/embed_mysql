@@ -6,6 +6,7 @@
 #include <QMenu>
 #include <QToolBar>
 #include <QStackedWidget>
+#include <QSqlDatabase>
 #include <QSqlTableModel>
 #include <QPushButton>
 #include <QHBoxLayout>
@@ -18,6 +19,12 @@
 #include <QValueAxis>
 #include <QCheckBox>
 #include <QTimer>
+
+#include <QSerialPort>
+#include <QSerialPortInfo>
+
+#include <QtCharts>
+
 #include "embed_sql.h"
 
 QT_BEGIN_NAMESPACE
@@ -49,6 +56,8 @@ private:
     QAction* dataAction;
     QAction* analysisAction;
 
+    bool isDatabaseConnected;
+
     QCheckBox* tempCheck;
     QCheckBox* humidCheck;
 
@@ -62,11 +71,16 @@ private:
     QSqlTableModel* dataModel;
 
     QTimer* updateTimer;
+
+    QSerialPort* serial;
+    QString portName;
+    QString tempArea;
 public slots:
     void switchPages();
     void setChartSeriesVisibility();
     void updateDataModel();
     void updateChart();
+    void updateSerialData();
 
 
 };

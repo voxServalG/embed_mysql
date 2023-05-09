@@ -9,9 +9,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     mysql = new embed_sql;
     if(mysql->init_sql())
-        qDebug("Connect successfully");
+        isDatabaseConnected = true;
     else
-        qDebug("Coneect failed");
+        isDatabaseConnected = false;
 
 
     createMenu();
@@ -23,8 +23,33 @@ MainWindow::MainWindow(QWidget *parent)
     this->updateTimer->setInterval(3000);
     this->updateTimer->start();
 
+    //设置串口
+    serial = new QSerialPort;
+    foreach(const QSerialPortInfo& info, QSerialPortInfo::availablePorts())
+    {
+        serial->setPort(info);
+        if(serial->open(QIODevice::ReadWrite))      // 以读写方式打开串口
+                {
+                    qDebug() << "串口打开成功";                        // 关闭
+                } else
+                {
+                    qDebug() << "串口打开失败，请重试";
+                }
+    }
+    serial->setBaudRate(QSerialPort::Baud9600);
+    serial->setParity(QSerialPort::NoParity);
+    serial->setDataBits(QSerialPort::Data8);
+    serial->setStopBits(QSerialPort::OneStop);
+    serial->setFlowControl(QSerialPort::NoFlowControl);
+
+
+    //设置串口
+
     connect(updateTimer, &QTimer::timeout, this, &MainWindow::updateDataModel);
     connect(updateTimer, &QTimer::timeout, this, &MainWindow::updateChart);
+    //
+    connect(updateTimer, &QTimer::timeout, this, &MainWindow::updateSerialData);
+    //
     connect(homeAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(dataAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(analysisAction, &QAction::triggered, this, &MainWindow::switchPages);
@@ -41,6 +66,7 @@ void MainWindow::createMenu()
 {
     //create top menus
     QMenu* fileMenu = menuBar()->addMenu("File");
+    fileMenu->addAction("test");
     QMenu* editMenu = menuBar()->addMenu("Edit");
     QMenu* checkMenu = menuBar()->addMenu("Check");
     QMenu* helpMenu = menuBar()->addMenu("Help");
@@ -85,8 +111,10 @@ QWidget* MainWindow::createHomePage()
     QWidget* homePage = new QWidget;
     QHBoxLayout* layout = new QHBoxLayout;
 
-    QLabel* welcomeLabel = new QLabel("WELCOME!!!");
+    QLabel* welcomeLabel = new QLabel("欢迎使用巡检系统");
+    QLabel* stateLabel = new QLabel(isDatabaseConnected ? "数据库已连接" : "数据库未连接");
     layout->addWidget(welcomeLabel);
+    layout->addWidget(stateLabel);
 
     homePage->setLayout(layout);
     return homePage;
@@ -278,4 +306,11 @@ void MainWindow::updateChart()
     seriesHumid->attachAxis(axisY1);
 
     chartView->setChart(newChart);
+}
+
+void MainWindow::updateSerialData()
+{
+    QByteArray rx_data;
+    rx_data = serial->readAll();
+    qDebug() << rx_data.data();
 }
