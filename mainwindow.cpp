@@ -22,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     initTimer();
 
     initSerial();
+    this->bootSec = 0;
 
     connect(dataQueryTimer, &QTimer::timeout, this, &MainWindow::updateDataModel);
     connect(dataQueryTimer, &QTimer::timeout, this, &MainWindow::updateChart);
@@ -295,6 +296,7 @@ void MainWindow::updateChart()
         timeEnd = time;
         seriesTemp->append(time, temp);
         seriesHumid->append(time, humidity);
+
     }
 
     //set axis
@@ -322,6 +324,7 @@ void MainWindow::updateChart()
 
 void MainWindow::updateSerialData()
 {
+    bootSec++;
     QByteArray rx_data = "na";
     rx_data = serial->readAll();
 
@@ -334,12 +337,18 @@ void MainWindow::updateSerialData()
     if(tempIndex != -1 && humidIndex != -1 && lightIndex != -1)
     {
     QString temp = rx_data.mid(tempIndex+1, humidIndex-1);
-    QString humid = rx_data.mid(humidIndex+1, lightIndex-humidIndex-1);
+    QString humidity = rx_data.mid(humidIndex+1, lightIndex-humidIndex-1);
     QString light = rx_data.mid(lightIndex+1, rxLength-lightIndex-3);
-    //qDebug() << "data: "<< rx_data.data() << ", T="<<temp<<", H="<<humid<<", L="<<light;
+    QString bootSecStr = QString::number(bootSec);
+    //qDebug() << "data: "<< rx_data.data() << ", T="<<temp<<", H="<<humid<<", L="<<light<<", bootSec="<<bootSec;
 
-    QString addQuery = "insert into field_data with data("+temp+","+humid+","+light+")";
-    qDebug() << addQuery;
+    QString addQuerySql = "INSERT INTO field_data (time, temp, humidity, light) VALUES (" + bootSecStr + "," + temp + "," + humidity + "," + light + ");";
+    qDebug() << addQuerySql;
+
+    QSqlQuery* addQuery = new QSqlQuery(mysql->getDb());
+    addQuery->exec(addQuerySql);
+
+
     }
 
 

@@ -78,6 +78,8 @@ private:
     QSerialPort* serial;
     QString portName;
     QString tempArea;
+
+    int bootSec;
 public slots:
     void switchPages();
     void setChartSeriesVisibility();
