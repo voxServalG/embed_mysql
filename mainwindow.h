@@ -46,6 +46,8 @@ private:
     void createMenu();
     void createNaviBar();
     void createStackWidget();
+    void initSerial();
+    void initTimer();
 
     QWidget* createHomePage();
     QWidget* createDataPage();
@@ -70,7 +72,8 @@ private:
     embed_sql* mysql;
     QSqlTableModel* dataModel;
 
-    QTimer* updateTimer;
+    QTimer* dataQueryTimer;
+    QTimer* rxTimer;
 
     QSerialPort* serial;
     QString portName;

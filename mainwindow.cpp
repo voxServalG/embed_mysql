@@ -19,16 +19,45 @@ MainWindow::MainWindow(QWidget *parent)
     createStackWidget();
     //createDataPage();
 
-    this->updateTimer = new QTimer(this);
-    this->updateTimer->setInterval(3000);
-    this->updateTimer->start();
+    initTimer();
 
+    initSerial();
+
+    connect(dataQueryTimer, &QTimer::timeout, this, &MainWindow::updateDataModel);
+    connect(dataQueryTimer, &QTimer::timeout, this, &MainWindow::updateChart);
+    //
+    connect(rxTimer, &QTimer::timeout, this, &MainWindow::updateSerialData);
+    //
+    connect(homeAction, &QAction::triggered, this, &MainWindow::switchPages);
+    connect(dataAction, &QAction::triggered, this, &MainWindow::switchPages);
+    connect(analysisAction, &QAction::triggered, this, &MainWindow::switchPages);
+    connect(tempCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
+    connect(humidCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+void MainWindow::initTimer()
+{
+    this->dataQueryTimer = new QTimer(this);
+    this->dataQueryTimer->setInterval(3000);
+    this->dataQueryTimer->start();
+
+    this->rxTimer = new QTimer(this);
+    this->rxTimer->setInterval(1000);
+    this->rxTimer->start();
+}
+void MainWindow::initSerial()
+{
     //设置串口
     serial = new QSerialPort;
     foreach(const QSerialPortInfo& info, QSerialPortInfo::availablePorts())
     {
         serial->setPort(info);
-        if(serial->open(QIODevice::ReadWrite))      // 以读写方式打开串口
+        if(serial->open(QIODevice::ReadOnly))      // 以读写方式打开串口
                 {
                     qDebug() << "串口打开成功";                        // 关闭
                 } else
@@ -44,24 +73,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     //设置串口
-
-    connect(updateTimer, &QTimer::timeout, this, &MainWindow::updateDataModel);
-    connect(updateTimer, &QTimer::timeout, this, &MainWindow::updateChart);
-    //
-    connect(updateTimer, &QTimer::timeout, this, &MainWindow::updateSerialData);
-    //
-    connect(homeAction, &QAction::triggered, this, &MainWindow::switchPages);
-    connect(dataAction, &QAction::triggered, this, &MainWindow::switchPages);
-    connect(analysisAction, &QAction::triggered, this, &MainWindow::switchPages);
-    connect(tempCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
-    connect(humidCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
 }
-
-MainWindow::~MainWindow()
-{
-    delete ui;
-}
-
 void MainWindow::createMenu()
 {
     //create top menus
@@ -310,7 +322,26 @@ void MainWindow::updateChart()
 
 void MainWindow::updateSerialData()
 {
-    QByteArray rx_data;
+    QByteArray rx_data = "na";
     rx_data = serial->readAll();
-    qDebug() << rx_data.data();
+
+
+    int tempIndex = rx_data.indexOf("T");
+    int humidIndex = rx_data.indexOf("H");
+    int lightIndex = rx_data.indexOf("L");
+    int rxLength = rx_data.length();
+
+    if(tempIndex != -1 && humidIndex != -1 && lightIndex != -1)
+    {
+    QString temp = rx_data.mid(tempIndex+1, humidIndex-1);
+    QString humid = rx_data.mid(humidIndex+1, lightIndex-humidIndex-1);
+    QString light = rx_data.mid(lightIndex+1, rxLength-lightIndex-3);
+    //qDebug() << "data: "<< rx_data.data() << ", T="<<temp<<", H="<<humid<<", L="<<light;
+
+    QString addQuery = "insert into field_data with data("+temp+","+humid+","+light+")";
+    qDebug() << addQuery;
+    }
+
+
+
 }
