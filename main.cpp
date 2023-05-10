@@ -14,6 +14,9 @@
 
 int main(int argc, char *argv[])
 {
+    //debug
+
+    //debug
     //Create an QApplication a, and create a MainWindow inside it.
     QApplication a(argc, argv);
     MainWindow w;

@@ -62,9 +62,11 @@ private:
 
     QCheckBox* tempCheck;
     QCheckBox* humidCheck;
+    QCheckBox* lightCheck;
 
     QLineSeries* seriesTemp;
     QLineSeries* seriesHumid;
+    QLineSeries* seriesLight;
 
     QChartView*  chartView;
     QChart* chart;

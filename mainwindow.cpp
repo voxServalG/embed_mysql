@@ -14,6 +14,12 @@ MainWindow::MainWindow(QWidget *parent)
         isDatabaseConnected = false;
 
 
+    //
+    QDateTime currentDateTime = QDateTime::currentDateTime();
+    QString currentTimeStr = currentDateTime.toString("yyyyMMdd_hhmmss");
+    QString addChartQuery = "";
+    //
+
     createMenu();
     createNaviBar();
     createStackWidget();
@@ -34,6 +40,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(analysisAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(tempCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
     connect(humidCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
+    connect(lightCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
 }
 
 MainWindow::~MainWindow()
@@ -197,13 +204,16 @@ QWidget* MainWindow::createAnalysisPage()
     QHBoxLayout* layout_title = new QHBoxLayout;
 //setting chartview into 'layout_title'
     QLabel* titleLabel = new QLabel("Analysis");
-    tempCheck = new QCheckBox("Temp");
-    humidCheck = new QCheckBox("Humidity");
+    tempCheck = new QCheckBox("TEMP");
+    humidCheck = new QCheckBox("HUMIDITY");
+    lightCheck = new QCheckBox("LIGHT");
     tempCheck->setCheckState(Qt::Checked);
     humidCheck->setCheckState(Qt::Checked);
+    lightCheck->setCheckState(Qt::Checked);
     layout_title->addWidget(titleLabel);
     layout_title->addWidget(tempCheck);
     layout_title->addWidget(humidCheck);
+    layout_title->addWidget(lightCheck);
 
 //setting chartview into 'layout'
     chartView = new QChartView(this);
@@ -253,6 +263,15 @@ void MainWindow::setChartSeriesVisibility()
         seriesHumid->setVisible(false);
     }
 
+    if(lightCheck->isChecked())
+    {
+        seriesLight->setVisible(true);
+    }
+    else
+    {
+        seriesLight->setVisible(false);
+    }
+
 
 }
 
@@ -266,13 +285,16 @@ void MainWindow::updateChart()
     QChart* newChart = new QChart();
     seriesTemp = new QLineSeries();
     seriesHumid = new QLineSeries();
-    seriesTemp->setName("Temp");
-    seriesHumid->setName("Humidity");
+    seriesLight = new QLineSeries();
+    seriesTemp->setName("TEMP");
+    seriesHumid->setName("HUMIDITY");
+    seriesLight->setName("LIGHT");
 
 
     //add series to chart
     newChart->addSeries(seriesTemp);
     newChart->addSeries(seriesHumid);
+    newChart->addSeries(seriesLight);
     //seriesHumid->setVisible(false);
 
     //sql query
@@ -288,6 +310,7 @@ void MainWindow::updateChart()
         qint32 time = query.value(0).toInt();
         qreal temp = query.value(1).toDouble();
         qreal humidity = query.value(2).toDouble();
+        qreal light = query.value(3).toDouble();
         if(isQueryEmpty)
         {
             timeFirst = time;
@@ -296,13 +319,15 @@ void MainWindow::updateChart()
         timeEnd = time;
         seriesTemp->append(time, temp);
         seriesHumid->append(time, humidity);
+        seriesLight->append(time, light);
 
     }
 
     //set axis
     QValueAxis* axisX_time = new QValueAxis;
+    timeFirst = timeEnd>=10 ? timeEnd-10 : 0;
     axisX_time->setRange(timeFirst, timeEnd);
-    axisX_time->setTickCount(numOfValue);
+    axisX_time->setTickCount(timeEnd - timeFirst + 1);
 
     newChart->addAxis(axisX_time, Qt::AlignBottom);
     QValueAxis *axisY=new QValueAxis;                //左边y轴
@@ -310,20 +335,25 @@ void MainWindow::updateChart()
     axisY->setTickCount(11);
     newChart->addAxis(axisY, Qt::AlignLeft);
     QValueAxis *axisY1=new QValueAxis;              //右边y轴
-    axisY1->setRange(0,100);
+    axisY1->setRange(0,800);
     axisY1->setTickCount(11);
     newChart->addAxis(axisY1, Qt::AlignRight);
+
     seriesTemp->attachAxis(axisX_time);                 //折线与坐标轴捆绑
     seriesTemp->attachAxis(axisY);
 
     seriesHumid->attachAxis(axisX_time);
-    seriesHumid->attachAxis(axisY1);
+    seriesHumid->attachAxis(axisY);
+
+    seriesLight->attachAxis(axisX_time);
+    seriesLight->attachAxis(axisY1);
 
     chartView->setChart(newChart);
 }
 
 void MainWindow::updateSerialData()
 {
+
     bootSec++;
     QByteArray rx_data = "na";
     rx_data = serial->readAll();
