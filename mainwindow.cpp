@@ -16,10 +16,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     //
     QDateTime currentDateTime = QDateTime::currentDateTime();
-    QString currentTimeStr = currentDateTime.toString("yyyyMMdd_hhmmss");
-    QString addChartQuery = "";
+    QString currentDateTimeStr = currentDateTime.toString("yyyyMMdd_hhmmss");
+    newTableName = "field_data_" + currentDateTimeStr;
+    QString createTableQuerySql = "CREATE TABLE `" + newTableName + "` (`time` INT(10) NOT NULL, `temp` VARCHAR(50) NOT NULL COLLATE 'utf8_general_ci', `humidity` VARCHAR(50) NOT NULL COLLATE 'utf8_general_ci', `light` VARCHAR(50) NOT NULL COLLATE 'utf8_general_ci', PRIMARY KEY (`time`) USING BTREE ) COLLATE='utf8_general_ci';";
+    QSqlQuery createTable(mysql->getDb());
+    createTable.exec(createTableQuerySql);
     //
-
+    createCURFrame();
     createMenu();
     createNaviBar();
     createStackWidget();
@@ -32,8 +35,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(dataQueryTimer, &QTimer::timeout, this, &MainWindow::updateDataModel);
     connect(dataQueryTimer, &QTimer::timeout, this, &MainWindow::updateChart);
+    connect(dataQueryTimer, &QTimer::timeout, this, &MainWindow::tableScrollToBottom);
     //
     connect(rxTimer, &QTimer::timeout, this, &MainWindow::updateSerialData);
+    connect(rxTimer, &QTimer::timeout, this, &MainWindow::updateCURFrame);
+
+    connect(rxClearTimer, &QTimer::timeout, this, &MainWindow::clearRx);
     //
     connect(homeAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(dataAction, &QAction::triggered, this, &MainWindow::switchPages);
@@ -48,36 +55,53 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::clearRx()
+{
+    serial->clear();
+}
+
 void MainWindow::initTimer()
 {
     this->dataQueryTimer = new QTimer(this);
-    this->dataQueryTimer->setInterval(3000);
+    this->dataQueryTimer->setInterval(1000);
     this->dataQueryTimer->start();
 
     this->rxTimer = new QTimer(this);
     this->rxTimer->setInterval(1000);
     this->rxTimer->start();
+
+    this->rxClearTimer = new QTimer(this);
+    this->rxClearTimer->setInterval(6500);
+    this->rxClearTimer->start();
 }
 void MainWindow::initSerial()
 {
     //设置串口
     serial = new QSerialPort;
-    foreach(const QSerialPortInfo& info, QSerialPortInfo::availablePorts())
-    {
-        serial->setPort(info);
-        if(serial->open(QIODevice::ReadOnly))      // 以读写方式打开串口
-                {
-                    qDebug() << "串口打开成功";                        // 关闭
-                } else
-                {
-                    qDebug() << "串口打开失败，请重试";
-                }
-    }
     serial->setBaudRate(QSerialPort::Baud9600);
     serial->setParity(QSerialPort::NoParity);
     serial->setDataBits(QSerialPort::Data8);
     serial->setStopBits(QSerialPort::OneStop);
     serial->setFlowControl(QSerialPort::NoFlowControl);
+//    foreach(const QSerialPortInfo& info, QSerialPortInfo::availablePorts())
+//    {
+//        serial->setPort(info);
+//        if(serial->open(QIODevice::ReadOnly))      // 以读写方式打开串口
+//                {
+//                    qDebug() << "串口打开成功";                        // 关闭
+//                } else
+//                {
+//                    qDebug() << "串口打开失败，请重试";
+//                }
+//    }
+    serial->setPortName("COM5");
+    if(serial->open(QIODevice::ReadOnly))      // 以读方式打开串口
+                    {
+                        qDebug() << "串口打开成功";
+                    } else
+                    {
+                        qDebug() << "串口打开失败，请重试";
+                    }
 
 
     //设置串口
@@ -139,6 +163,59 @@ QWidget* MainWindow::createHomePage()
     homePage->setLayout(layout);
     return homePage;
 }
+
+void MainWindow::updateCURFrame()
+{
+    this->timeValueLabel->setText(QString::number(time));
+    this->tempValueLabel->setText(QString::number(temp));
+    this->humidValueLabel->setText(QString::number(humidity));
+    this->lightValueLabel->setText(QString::number(light));
+}
+
+void MainWindow::createCURFrame()
+{
+    this->CURFrame = new QFrame;
+
+    QLabel* timeLabel = new QLabel("TIME");
+    timeValueLabel = new QLabel(QString::number(time));
+    QLabel* tempLabel = new QLabel("TEMP");
+    tempValueLabel = new QLabel(QString::number(temp));
+    QLabel* humidLabel = new QLabel("HUMIDITY");
+    humidValueLabel = new QLabel(QString::number(humidity));
+    QLabel* lightLabel = new QLabel("LIGHT");
+    lightValueLabel = new QLabel(QString::number(light));
+
+
+    QHBoxLayout* sLayout_1 = new QHBoxLayout;
+    sLayout_1->addWidget(timeLabel);
+    sLayout_1->addWidget(timeValueLabel);
+    sLayout_1->addStretch();
+
+    QHBoxLayout* sLayout_2 = new QHBoxLayout;
+    sLayout_2->addWidget(tempLabel);
+    sLayout_2->addWidget(tempValueLabel);
+    sLayout_2->addStretch();
+
+    QHBoxLayout* sLayout_3 = new QHBoxLayout;
+    sLayout_3->addWidget(humidLabel);
+    sLayout_3->addWidget(humidValueLabel);
+    sLayout_3->addStretch();
+
+    QHBoxLayout* sLayout_4 = new QHBoxLayout;
+    sLayout_4->addWidget(lightLabel);
+    sLayout_4->addWidget(lightValueLabel);
+    sLayout_4->addStretch();
+
+
+    QHBoxLayout* sLayout = new QHBoxLayout;
+    sLayout->addLayout(sLayout_1);
+    sLayout->addLayout(sLayout_2);
+    sLayout->addLayout(sLayout_3);
+    sLayout->addLayout(sLayout_4);
+    CURFrame->setFrameStyle(QFrame::StyledPanel);
+    CURFrame->setLayout(sLayout);
+
+}
 QWidget* MainWindow::createDataPage()
 {
     QWidget* dataPage = new QWidget;
@@ -150,32 +227,33 @@ QWidget* MainWindow::createDataPage()
     titleLayout->addStretch();
     titleLayout->addWidget(addButton);
 
-    QLabel* timeLabel = new QLabel("TIME");
-    QLineEdit* timeEdit = new QLineEdit;
-    QLabel* tempLabel = new QLabel("TEMP");
-    QLineEdit* tempEdit = new QLineEdit;
+//    QLabel* timeLabel = new QLabel("TIME");
+//    timeValueLabel = new QLabel(QString::number(time));
+//    QLabel* tempLabel = new QLabel("TEMP");
+//    tempValueLabel = new QLabel(QString::number(temp));
 
-    QHBoxLayout* sLayout_1 = new QHBoxLayout;
-    sLayout_1->addWidget(timeLabel);
-    sLayout_1->addWidget(timeEdit);
-    sLayout_1->addStretch();
 
-    QHBoxLayout* sLayout_2 = new QHBoxLayout;
-    sLayout_2->addWidget(tempLabel);
-    sLayout_2->addWidget(tempEdit);
-    sLayout_2->addStretch();
+//    QHBoxLayout* sLayout_1 = new QHBoxLayout;
+//    sLayout_1->addWidget(timeLabel);
+//    sLayout_1->addWidget(timeValueLabel);
+//    sLayout_1->addStretch();
 
-    QVBoxLayout* sLayout = new QVBoxLayout;
-    sLayout->addLayout(sLayout_1);
-    sLayout->addLayout(sLayout_2);
-    QFrame* sFrame = new QFrame;
-    sFrame->setFrameStyle(QFrame::StyledPanel);
-    sFrame->setLayout(sLayout);
+//    QHBoxLayout* sLayout_2 = new QHBoxLayout;
+//    sLayout_2->addWidget(tempLabel);
+//    sLayout_2->addWidget(tempValueLabel);
+//    sLayout_2->addStretch();
+
+//    QVBoxLayout* sLayout = new QVBoxLayout;
+//    sLayout->addLayout(sLayout_1);
+//    sLayout->addLayout(sLayout_2);
+//    QFrame* sFrame = new QFrame;
+//    sFrame->setFrameStyle(QFrame::StyledPanel);
+//    sFrame->setLayout(sLayout);
 
 
     //to update dataModel every interval. to do setModel for tableView every interval
     dataModel = new QSqlTableModel(dataPage, mysql->getDb());
-    dataModel->setTable("field_data");
+    dataModel->setTable(newTableName);
     dataModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
     dataModel->setHeaderData(0, Qt::Horizontal, "TIME");
     dataModel->setHeaderData(1, Qt::Horizontal, "TEMP");
@@ -183,13 +261,14 @@ QWidget* MainWindow::createDataPage()
     dataModel->setHeaderData(3, Qt::Horizontal, "LIGHT");
     dataModel->select();
 
-    QTableView* tableView = new QTableView(this);
+    this->tableView = new QTableView(this);
     tableView->setModel(dataModel);
+    tableView->setAutoFillBackground(true);
     tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     QVBoxLayout* layout = new QVBoxLayout;
     layout->addLayout(titleLayout);
-    layout->addWidget(sFrame);
+    layout->addWidget(CURFrame);
     layout->addWidget(tableView);
 
     dataPage->setLayout(layout);
@@ -220,6 +299,7 @@ QWidget* MainWindow::createAnalysisPage()
     chart = new QChart();
     chart->setTitle("ANALYSIS");
     chartView->setChart(chart);
+    chartView->setAutoFillBackground(true);
     this->setCentralWidget(chartView);
 
     layout->addWidget(chartView);
@@ -227,6 +307,7 @@ QWidget* MainWindow::createAnalysisPage()
 //Adding QHB into QVB
     QVBoxLayout* layout_final = new QVBoxLayout;
     layout_final->addLayout(layout_title);
+    layout_final->addWidget(CURFrame);
     layout_final->addLayout(layout);
     analysisPage->setLayout(layout_final);
     return analysisPage;
@@ -280,6 +361,10 @@ void MainWindow::updateDataModel()
     this->dataModel->select();
 }
 
+void MainWindow::tableScrollToBottom()
+{
+    this->tableView->scrollToBottom();
+}
 void MainWindow::updateChart()
 {
     QChart* newChart = new QChart();
@@ -299,7 +384,7 @@ void MainWindow::updateChart()
 
     //sql query
     QSqlQuery query(mysql->getDb());
-    QString sql = "select * from field_data";
+    QString sql = "select * from " + newTableName;
     query.exec(sql);
     bool isQueryEmpty = true;
     int numOfValue = 0;
@@ -307,10 +392,11 @@ void MainWindow::updateChart()
     while(query.next())
     {
         numOfValue++;
-        qint32 time = query.value(0).toInt();
-        qreal temp = query.value(1).toDouble();
-        qreal humidity = query.value(2).toDouble();
-        qreal light = query.value(3).toDouble();
+        time = query.value(0).toInt();
+        temp = query.value(1).toDouble();
+        humidity = query.value(2).toDouble();
+        light = query.value(3).toInt();
+        //qDebug() << light;
         if(isQueryEmpty)
         {
             timeFirst = time;
@@ -325,7 +411,7 @@ void MainWindow::updateChart()
 
     //set axis
     QValueAxis* axisX_time = new QValueAxis;
-    timeFirst = timeEnd>=10 ? timeEnd-10 : 0;
+    timeFirst = timeEnd>=15 ? timeEnd-15 : 0;
     axisX_time->setRange(timeFirst, timeEnd);
     axisX_time->setTickCount(timeEnd - timeFirst + 1);
 
@@ -356,8 +442,9 @@ void MainWindow::updateSerialData()
 
     bootSec++;
     QByteArray rx_data = "na";
-    rx_data = serial->readAll();
 
+    rx_data = serial->readLine();
+    qDebug() << rx_data;
 
     int tempIndex = rx_data.indexOf("T");
     int humidIndex = rx_data.indexOf("H");
@@ -366,13 +453,13 @@ void MainWindow::updateSerialData()
 
     if(tempIndex != -1 && humidIndex != -1 && lightIndex != -1)
     {
-    QString temp = rx_data.mid(tempIndex+1, humidIndex-1);
-    QString humidity = rx_data.mid(humidIndex+1, lightIndex-humidIndex-1);
-    QString light = rx_data.mid(lightIndex+1, rxLength-lightIndex-3);
+    QString humidity = rx_data.mid(humidIndex+1, tempIndex-1);
+    QString temp = rx_data.mid(tempIndex+1, lightIndex-tempIndex-1);
+    QString light = rx_data.mid(lightIndex+1, rxLength-lightIndex-2);
     QString bootSecStr = QString::number(bootSec);
     //qDebug() << "data: "<< rx_data.data() << ", T="<<temp<<", H="<<humid<<", L="<<light<<", bootSec="<<bootSec;
 
-    QString addQuerySql = "INSERT INTO field_data (time, temp, humidity, light) VALUES (" + bootSecStr + "," + temp + "," + humidity + "," + light + ");";
+    QString addQuerySql = "INSERT INTO " + newTableName + " (time, temp, humidity, light) VALUES (" + bootSecStr + "," + temp + "," + humidity + "," + light + ");";
     qDebug() << addQuerySql;
 
     QSqlQuery* addQuery = new QSqlQuery(mysql->getDb());

@@ -52,6 +52,7 @@ private:
     QWidget* createHomePage();
     QWidget* createDataPage();
     QWidget* createAnalysisPage();
+    void createCURFrame();
 
     QStackedWidget* stackWidget;
     QAction* homeAction;
@@ -76,11 +77,24 @@ private:
 
     QTimer* dataQueryTimer;
     QTimer* rxTimer;
+    QTimer* CURUpdateTimer;
+    QTimer* rxClearTimer;
 
     QSerialPort* serial;
     QString portName;
     QString tempArea;
+    QString newTableName;
 
+    qint32 time, light;
+    qreal temp, humidity;
+
+    QLabel* timeValueLabel;
+    QLabel* tempValueLabel;
+    QLabel* humidValueLabel;
+    QLabel* lightValueLabel;
+    QFrame* CURFrame;
+
+    QTableView* tableView;
     int bootSec;
 public slots:
     void switchPages();
@@ -88,6 +102,9 @@ public slots:
     void updateDataModel();
     void updateChart();
     void updateSerialData();
+    void updateCURFrame();
+    void clearRx();
+    void tableScrollToBottom();
 
 
 };
