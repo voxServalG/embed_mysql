@@ -14,6 +14,11 @@ MainWindow::MainWindow(QWidget *parent)
         isDatabaseConnected = false;
 
 
+
+    initTimer();
+
+    initSerial();
+    this->bootSec = 0;
     //
     QDateTime currentDateTime = QDateTime::currentDateTime();
     QString currentDateTimeStr = currentDateTime.toString("yyyyMMdd_hhmmss");
@@ -28,10 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
     createStackWidget();
     //createDataPage();
 
-    initTimer();
 
-    initSerial();
-    this->bootSec = 0;
 
     connect(dataQueryTimer, &QTimer::timeout, this, &MainWindow::updateDataModel);
     connect(dataQueryTimer, &QTimer::timeout, this, &MainWindow::updateChart);
@@ -45,9 +47,13 @@ MainWindow::MainWindow(QWidget *parent)
     connect(homeAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(dataAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(analysisAction, &QAction::triggered, this, &MainWindow::switchPages);
+    connect(historyAction, &QAction::triggered, this, &MainWindow::switchPages);
     connect(tempCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
     connect(humidCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
     connect(lightCheck, &QCheckBox::stateChanged, this, &MainWindow::setChartSeriesVisibility);
+    connect(dateBox, &QComboBox::currentTextChanged, this, &MainWindow::updateTimeOnDateChanged);
+    connect(timeBox, &QComboBox::currentTextChanged, this, &MainWindow::updateHistoryChartOnTimeChanged);
+    connect(historyChartView->chart(), &QtCharts::QChart::plotAreaChanged, this, &MainWindow::refineAxisOnZoomHappened);
 }
 
 MainWindow::~MainWindow()
@@ -59,6 +65,7 @@ void MainWindow::clearRx()
 {
     serial->clear();
 }
+
 
 void MainWindow::initTimer()
 {
@@ -95,12 +102,13 @@ void MainWindow::initSerial()
 //                }
 //    }
     serial->setPortName("COM5");
+    isCOMConnected = false;
     if(serial->open(QIODevice::ReadOnly))      // 以读方式打开串口
                     {
-                        qDebug() << "串口打开成功";
+                        isCOMConnected = true;
                     } else
                     {
-                        qDebug() << "串口打开失败，请重试";
+                        isCOMConnected = false;
                     }
 
 
@@ -131,6 +139,9 @@ void MainWindow::createNaviBar()
     analysisAction = new QAction("ANALYSIS" ,this);
     naviBar->addAction(analysisAction);
 
+    historyAction = new QAction("HISTORY", this);
+    naviBar->addAction(historyAction);
+
     naviBar->setMovable(false);
 }
 
@@ -140,10 +151,12 @@ void MainWindow::createStackWidget()
     QWidget* homePage = createHomePage();
     QWidget* dataPage = createDataPage();
     QWidget* analysisPage = createAnalysisPage();
+    QWidget* historyPage = createHistoryPage();
 
     stackWidget->addWidget(homePage);
     stackWidget->addWidget(dataPage);
     stackWidget->addWidget(analysisPage);
+    stackWidget->addWidget(historyPage);
 
 
 
@@ -154,11 +167,17 @@ QWidget* MainWindow::createHomePage()
 {
     QWidget* homePage = new QWidget;
     QHBoxLayout* layout = new QHBoxLayout;
+    QVBoxLayout* stateLayout = new QVBoxLayout;
 
     QLabel* welcomeLabel = new QLabel("欢迎使用巡检系统");
-    QLabel* stateLabel = new QLabel(isDatabaseConnected ? "数据库已连接" : "数据库未连接");
+    QLabel* dbStateLabel = new QLabel(isDatabaseConnected ? "数据库已连接" : "数据库未连接");
+    QLabel* COMStateLabel = new QLabel(isCOMConnected ? "COM connected" : "COM not connected");
+
+    stateLayout->addWidget(dbStateLabel);
+    stateLayout->addWidget(COMStateLabel);
+
     layout->addWidget(welcomeLabel);
-    layout->addWidget(stateLabel);
+    layout->addLayout(stateLayout);
 
     homePage->setLayout(layout);
     return homePage;
@@ -313,6 +332,41 @@ QWidget* MainWindow::createAnalysisPage()
     return analysisPage;
 }
 
+QWidget* MainWindow::createHistoryPage()
+{
+    QWidget* historyPage = new QWidget;
+
+    QHBoxLayout* searchLayout = new QHBoxLayout;
+    QLabel* dateTitleLabel = new QLabel("日期");
+    dateBox = new QComboBox;
+    QLabel* timeTitleLabel = new QLabel("时间");
+    timeBox = new QComboBox;
+
+    searchLayout->addWidget(dateTitleLabel);
+    searchLayout->addWidget(dateBox);
+    searchLayout->addStretch();
+    searchLayout->addWidget(timeTitleLabel);
+    searchLayout->addWidget(timeBox);
+    searchLayout->addStretch();
+
+    QStringList dateList = mysql->getAllDates();
+    for(QString date : dateList)
+    {
+        dateBox->addItem(date);
+    }
+
+    QVBoxLayout* finalLayout = new QVBoxLayout;
+    historyChartView = new QChartView;
+    finalLayout->addLayout(searchLayout);
+    finalLayout->addWidget(historyChartView);
+
+    updateTimeOnDateChanged();
+    updateHistoryChartOnTimeChanged();
+    historyPage->setLayout(finalLayout);
+    historyChartView->setRubberBand(QtCharts::QChartView::HorizontalRubberBand);
+
+    return historyPage;
+}
 void MainWindow::switchPages()
 {
     QAction* action = qobject_cast<QAction*>(sender());
@@ -322,6 +376,9 @@ void MainWindow::switchPages()
         stackWidget->setCurrentIndex(1);
     else if(action->text() == "ANALYSIS")
         stackWidget->setCurrentIndex(2);
+    else if(action->text() == "HISTORY")
+        stackWidget->setCurrentIndex(3);
+
 }
 
 void MainWindow::setChartSeriesVisibility()
@@ -367,6 +424,80 @@ void MainWindow::tableScrollToBottom()
 }
 void MainWindow::updateChart()
 {
+//    QChart* newChart = new QChart();
+//    seriesTemp = new QLineSeries();
+//    seriesHumid = new QLineSeries();
+//    seriesLight = new QLineSeries();
+//    seriesTemp->setName("TEMP");
+//    seriesHumid->setName("HUMIDITY");
+//    seriesLight->setName("LIGHT");
+
+
+//    //add series to chart
+//    newChart->addSeries(seriesTemp);
+//    newChart->addSeries(seriesHumid);
+//    newChart->addSeries(seriesLight);
+//    //seriesHumid->setVisible(false);
+
+//    //sql query
+//    QSqlQuery query(mysql->getDb());
+//    QString sql = "select * from " + newTableName;
+//    query.exec(sql);
+//    bool isQueryEmpty = true;
+//    int numOfValue = 0;
+//    qint32 timeFirst, timeEnd;
+//    while(query.next())
+//    {
+//        numOfValue++;
+//        time = query.value(0).toInt();
+//        temp = query.value(1).toDouble();
+//        humidity = query.value(2).toDouble();
+//        light = query.value(3).toInt();
+//        //qDebug() << light;
+//        if(isQueryEmpty)
+//        {
+//            timeFirst = time;
+//            isQueryEmpty = false;
+//        }
+//        timeEnd = time;
+//        seriesTemp->append(time, temp);
+//        seriesHumid->append(time, humidity);
+//        seriesLight->append(time, light);
+
+//    }
+
+//    //set axis
+//    QValueAxis* axisX_time = new QValueAxis;
+//    timeFirst = timeEnd>=15 ? timeEnd-15 : 0;
+//    axisX_time->setRange(timeFirst, timeEnd);
+//    axisX_time->setTickCount(timeEnd - timeFirst + 1);
+
+//    newChart->addAxis(axisX_time, Qt::AlignBottom);
+//    QValueAxis *axisY=new QValueAxis;                //左边y轴
+//    axisY->setRange(0,100);
+//    axisY->setTickCount(11);
+//    newChart->addAxis(axisY, Qt::AlignLeft);
+//    QValueAxis *axisY1=new QValueAxis;              //右边y轴
+//    axisY1->setRange(0,800);
+//    axisY1->setTickCount(11);
+//    newChart->addAxis(axisY1, Qt::AlignRight);
+
+//    seriesTemp->attachAxis(axisX_time);                 //折线与坐标轴捆绑
+//    seriesTemp->attachAxis(axisY);
+
+//    seriesHumid->attachAxis(axisX_time);
+//    seriesHumid->attachAxis(axisY);
+
+//    seriesLight->attachAxis(axisX_time);
+//    seriesLight->attachAxis(axisY1);
+    QString sql = "select * from " + newTableName;
+    QChart* newChart = depictChart(sql, 15);
+    chartView->setChart(newChart);
+    //chartView->setRubberBand(QChartView::HorizontalRubberBand);
+}
+
+QChart* MainWindow::depictChart(QString sql, int timeRange)
+{
     QChart* newChart = new QChart();
     seriesTemp = new QLineSeries();
     seriesHumid = new QLineSeries();
@@ -384,7 +515,6 @@ void MainWindow::updateChart()
 
     //sql query
     QSqlQuery query(mysql->getDb());
-    QString sql = "select * from " + newTableName;
     query.exec(sql);
     bool isQueryEmpty = true;
     int numOfValue = 0;
@@ -411,7 +541,7 @@ void MainWindow::updateChart()
 
     //set axis
     QValueAxis* axisX_time = new QValueAxis;
-    timeFirst = timeEnd>=15 ? timeEnd-15 : 0;
+    timeFirst = timeEnd>=timeRange ? timeEnd-timeRange : 0;
     axisX_time->setRange(timeFirst, timeEnd);
     axisX_time->setTickCount(timeEnd - timeFirst + 1);
 
@@ -434,7 +564,7 @@ void MainWindow::updateChart()
     seriesLight->attachAxis(axisX_time);
     seriesLight->attachAxis(axisY1);
 
-    chartView->setChart(newChart);
+    return newChart;
 }
 
 void MainWindow::updateSerialData()
@@ -470,4 +600,44 @@ void MainWindow::updateSerialData()
 
 
 
+}
+
+
+
+
+void MainWindow::updateTimeOnDateChanged()
+{
+    QString selectedDate = dateBox->currentText();
+    QStringList timeListOnSelectedDate = mysql->getAllTimesProvidedDate(selectedDate);
+
+    this->timeBox->clear();
+    for(QString time : timeListOnSelectedDate)
+    {
+        timeBox->addItem(time);
+    }
+}
+
+void MainWindow::updateHistoryChartOnTimeChanged()
+{
+    QString currentDate = dateBox->currentText();
+    QString currentTime = timeBox->currentText();
+    QString tableName = "field_data_" + currentDate + "_" + currentTime;
+    QString sql = "SELECT * FROM " + tableName;
+    QChart* newChart = depictChart(sql, 1800);
+    historyChartView->setChart(newChart);
+}
+
+void MainWindow::refineAxisOnZoomHappened(const QRectF &plotArea)
+{
+    // 获取图表的 X 轴和 Y 轴
+            QtCharts::QValueAxis *axisX = qobject_cast<QtCharts::QValueAxis *>(historyChartView->chart()->axisX());
+            QtCharts::QValueAxis *axisY = qobject_cast<QtCharts::QValueAxis *>(historyChartView->chart()->axisY());
+
+            // 根据缩放后的绘图区域调整坐标轴范围
+            axisX->setRange(plotArea.left(), plotArea.right());
+            axisY->setRange(plotArea.bottom(), plotArea.top());
+
+            // 根据缩放后的绘图区域调整坐标轴刻度
+            axisX->applyNiceNumbers();
+            axisY->applyNiceNumbers();
 }

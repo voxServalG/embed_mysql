@@ -19,6 +19,8 @@ public:
                   int port=3306
                   );
     QSqlDatabase getDb();
+    QStringList getAllDates();
+    QStringList getAllTimesProvidedDate(QString date);
 private:
     QSqlDatabase db;
 };

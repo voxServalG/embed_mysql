@@ -19,6 +19,7 @@
 #include <QValueAxis>
 #include <QCheckBox>
 #include <QTimer>
+#include <QComboBox>
 
 #include <QSerialPort>
 #include <QSerialPortInfo>
@@ -52,14 +53,19 @@ private:
     QWidget* createHomePage();
     QWidget* createDataPage();
     QWidget* createAnalysisPage();
+    QWidget* createHistoryPage();
     void createCURFrame();
+
+    QChart* depictChart(QString sqlForChart, int timeRange);
 
     QStackedWidget* stackWidget;
     QAction* homeAction;
     QAction* dataAction;
     QAction* analysisAction;
+    QAction* historyAction;
 
     bool isDatabaseConnected;
+    bool isCOMConnected;
 
     QCheckBox* tempCheck;
     QCheckBox* humidCheck;
@@ -71,6 +77,7 @@ private:
 
     QChartView*  chartView;
     QChart* chart;
+    QChartView* historyChartView;
 
     embed_sql* mysql;
     QSqlTableModel* dataModel;
@@ -96,6 +103,9 @@ private:
 
     QTableView* tableView;
     int bootSec;
+
+    QComboBox* dateBox;
+    QComboBox* timeBox;
 public slots:
     void switchPages();
     void setChartSeriesVisibility();
@@ -105,7 +115,9 @@ public slots:
     void updateCURFrame();
     void clearRx();
     void tableScrollToBottom();
-
+    void updateTimeOnDateChanged();
+    void updateHistoryChartOnTimeChanged();
+    void refineAxisOnZoomHappened(const QRectF &plotArea);
 
 };
 #endif // MAINWINDOW_H
