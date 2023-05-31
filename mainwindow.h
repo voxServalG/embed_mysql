@@ -99,13 +99,24 @@ private:
     QLabel* tempValueLabel;
     QLabel* humidValueLabel;
     QLabel* lightValueLabel;
+    QLabel* coorValueLabel;
     QFrame* CURFrame;
 
     QTableView* tableView;
     int bootSec;
+    int coorT;
+    int coorX;
+    int coorY;
+    bool p1Passed;
+    bool p2Passed;
+    bool p3Passed;
+    bool p4Passed;
+    bool p5Passed;
 
     QComboBox* dateBox;
     QComboBox* timeBox;
+
+    QMenu* fileMenu;
 public slots:
     void switchPages();
     void setChartSeriesVisibility();
@@ -118,6 +129,8 @@ public slots:
     void updateTimeOnDateChanged();
     void updateHistoryChartOnTimeChanged();
     void refineAxisOnZoomHappened(const QRectF &plotArea);
+    void startUpdateCoordinate();
+    void updateCoordinate();
 
 };
 #endif // MAINWINDOW_H

@@ -54,6 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(dateBox, &QComboBox::currentTextChanged, this, &MainWindow::updateTimeOnDateChanged);
     connect(timeBox, &QComboBox::currentTextChanged, this, &MainWindow::updateHistoryChartOnTimeChanged);
     connect(historyChartView->chart(), &QtCharts::QChart::plotAreaChanged, this, &MainWindow::refineAxisOnZoomHappened);
+    connect(fileMenu, &QMenu::aboutToShow, this, &MainWindow::startUpdateCoordinate);
 }
 
 MainWindow::~MainWindow()
@@ -66,6 +67,10 @@ void MainWindow::clearRx()
     serial->clear();
 }
 
+void MainWindow::startUpdateCoordinate()
+{
+    connect(dataQueryTimer, &QTimer::timeout, this, &MainWindow::updateCoordinate);
+}
 
 void MainWindow::initTimer()
 {
@@ -117,7 +122,7 @@ void MainWindow::initSerial()
 void MainWindow::createMenu()
 {
     //create top menus
-    QMenu* fileMenu = menuBar()->addMenu("File");
+    fileMenu = menuBar()->addMenu("File");
     fileMenu->addAction("test");
     QMenu* editMenu = menuBar()->addMenu("Edit");
     QMenu* checkMenu = menuBar()->addMenu("Check");
@@ -183,17 +188,59 @@ QWidget* MainWindow::createHomePage()
     return homePage;
 }
 
+void MainWindow::updateCoordinate()
+{
+    coorT ++;
+    if(p1Passed && !p2Passed)
+    {
+        coorY++;
+        if(coorX == 0 && coorY == 45)   p2Passed = true;
+        return;
+    }
+
+    else if(p2Passed && !p3Passed)
+    {
+        coorX++;
+        if(coorX == 7 && coorY == 45)   p3Passed = true;
+        return;
+    }
+
+    else if(p3Passed && !p4Passed)
+    {
+        coorX--;
+        if(coorX == 0 && coorY == 45)   p4Passed = true;
+        return;
+    }
+
+    else if(p4Passed && !p5Passed)
+    {
+        coorY--;
+        if(coorX == 0&&coorY == 0)      p5Passed = true;
+        return;
+    }
+
+}
 void MainWindow::updateCURFrame()
 {
     this->timeValueLabel->setText(QString::number(time));
     this->tempValueLabel->setText(QString::number(temp));
     this->humidValueLabel->setText(QString::number(humidity));
     this->lightValueLabel->setText(QString::number(light));
+    QString newCoorString = "(" + QString::number(coorT) + "," + QString::number(coorX) + "," + QString::number(coorY) + ")";
+    coorValueLabel->setText(newCoorString);
 }
 
 void MainWindow::createCURFrame()
 {
     this->CURFrame = new QFrame;
+    coorX = 0;
+    coorY = 0;
+    coorT = 0;
+    p1Passed = true;
+    p2Passed = false;
+    p3Passed = false;
+    p4Passed = false;
+    p5Passed = false;
 
     QLabel* timeLabel = new QLabel("TIME");
     timeValueLabel = new QLabel(QString::number(time));
@@ -203,6 +250,9 @@ void MainWindow::createCURFrame()
     humidValueLabel = new QLabel(QString::number(humidity));
     QLabel* lightLabel = new QLabel("LIGHT");
     lightValueLabel = new QLabel(QString::number(light));
+    QLabel* coorLabel = new QLabel("COORDINATE");
+    QString coorString = "(" + QString::number(coorT) + "," + QString::number(coorX) + "," + QString::number(coorY) + ")";
+    coorValueLabel = new QLabel(coorString);
 
 
     QHBoxLayout* sLayout_1 = new QHBoxLayout;
@@ -226,11 +276,17 @@ void MainWindow::createCURFrame()
     sLayout_4->addStretch();
 
 
+    QHBoxLayout* sLayout_5 = new QHBoxLayout;
+    sLayout_5->addWidget(coorLabel);
+    sLayout_5->addWidget(coorValueLabel);
+    sLayout_5->addStretch();
+
     QHBoxLayout* sLayout = new QHBoxLayout;
     sLayout->addLayout(sLayout_1);
     sLayout->addLayout(sLayout_2);
     sLayout->addLayout(sLayout_3);
     sLayout->addLayout(sLayout_4);
+    sLayout->addLayout(sLayout_5);
     CURFrame->setFrameStyle(QFrame::StyledPanel);
     CURFrame->setLayout(sLayout);
 
@@ -424,76 +480,9 @@ void MainWindow::tableScrollToBottom()
 }
 void MainWindow::updateChart()
 {
-//    QChart* newChart = new QChart();
-//    seriesTemp = new QLineSeries();
-//    seriesHumid = new QLineSeries();
-//    seriesLight = new QLineSeries();
-//    seriesTemp->setName("TEMP");
-//    seriesHumid->setName("HUMIDITY");
-//    seriesLight->setName("LIGHT");
-
-
-//    //add series to chart
-//    newChart->addSeries(seriesTemp);
-//    newChart->addSeries(seriesHumid);
-//    newChart->addSeries(seriesLight);
-//    //seriesHumid->setVisible(false);
-
-//    //sql query
-//    QSqlQuery query(mysql->getDb());
-//    QString sql = "select * from " + newTableName;
-//    query.exec(sql);
-//    bool isQueryEmpty = true;
-//    int numOfValue = 0;
-//    qint32 timeFirst, timeEnd;
-//    while(query.next())
-//    {
-//        numOfValue++;
-//        time = query.value(0).toInt();
-//        temp = query.value(1).toDouble();
-//        humidity = query.value(2).toDouble();
-//        light = query.value(3).toInt();
-//        //qDebug() << light;
-//        if(isQueryEmpty)
-//        {
-//            timeFirst = time;
-//            isQueryEmpty = false;
-//        }
-//        timeEnd = time;
-//        seriesTemp->append(time, temp);
-//        seriesHumid->append(time, humidity);
-//        seriesLight->append(time, light);
-
-//    }
-
-//    //set axis
-//    QValueAxis* axisX_time = new QValueAxis;
-//    timeFirst = timeEnd>=15 ? timeEnd-15 : 0;
-//    axisX_time->setRange(timeFirst, timeEnd);
-//    axisX_time->setTickCount(timeEnd - timeFirst + 1);
-
-//    newChart->addAxis(axisX_time, Qt::AlignBottom);
-//    QValueAxis *axisY=new QValueAxis;                //左边y轴
-//    axisY->setRange(0,100);
-//    axisY->setTickCount(11);
-//    newChart->addAxis(axisY, Qt::AlignLeft);
-//    QValueAxis *axisY1=new QValueAxis;              //右边y轴
-//    axisY1->setRange(0,800);
-//    axisY1->setTickCount(11);
-//    newChart->addAxis(axisY1, Qt::AlignRight);
-
-//    seriesTemp->attachAxis(axisX_time);                 //折线与坐标轴捆绑
-//    seriesTemp->attachAxis(axisY);
-
-//    seriesHumid->attachAxis(axisX_time);
-//    seriesHumid->attachAxis(axisY);
-
-//    seriesLight->attachAxis(axisX_time);
-//    seriesLight->attachAxis(axisY1);
     QString sql = "select * from " + newTableName;
     QChart* newChart = depictChart(sql, 15);
     chartView->setChart(newChart);
-    //chartView->setRubberBand(QChartView::HorizontalRubberBand);
 }
 
 QChart* MainWindow::depictChart(QString sql, int timeRange)
@@ -601,10 +590,6 @@ void MainWindow::updateSerialData()
 
 
 }
-
-
-
-
 void MainWindow::updateTimeOnDateChanged()
 {
     QString selectedDate = dateBox->currentText();
@@ -623,7 +608,7 @@ void MainWindow::updateHistoryChartOnTimeChanged()
     QString currentTime = timeBox->currentText();
     QString tableName = "field_data_" + currentDate + "_" + currentTime;
     QString sql = "SELECT * FROM " + tableName;
-    QChart* newChart = depictChart(sql, 1800);
+    QChart* newChart = depictChart(sql, 16);
     historyChartView->setChart(newChart);
 }
 
